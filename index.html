@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counting</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.16.8/dist/xlsx.full.min.js"></script>
+    <style>
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        th,
+        td {
+            border: 1px solid #555;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <input type="file" id="excelFile" accept=".xlsx, .xls">
+    <div id="table-container"></div>
+
+    <script>
+        const excelFile = document.getElementById('excelFile');
+
+        excelFile.addEventListener('change', (event) => {
+            const selectedFile = event.target.files[0];
+            if (selectedFile) {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    const sheetName = workbook.SheetNames[0]; // Assuming you want to read the first sheet
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    console.log(jsonData); // Display the data as JSON
+                    // Further processing of jsonData can be done here
+                    createTableFromArray(jsonData, "table-container");
+                };
+                reader.readAsArrayBuffer(selectedFile);
+            }
+        });
+
+
+        function createTableFromArray(arrayOfObjects, containerId) {
+            if (!arrayOfObjects.length) {
+                document.getElementById(containerId).innerHTML = "<p>No data available.</p>";
+                return;
+            }
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const tbody = document.createElement("tbody");
+
+            // Create header row
+            const headerRow = document.createElement("tr");
+            const headers = Object.keys(arrayOfObjects[0]);
+            headers.forEach(key => {
+                const th = document.createElement("th");
+                th.textContent = key;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Create data rows
+            arrayOfObjects.forEach(obj => {
+                const row = document.createElement("tr");
+                headers.forEach(key => {
+                    const td = document.createElement("td");
+                    td.textContent = obj[key];
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            document.getElementById(containerId).appendChild(table);
+        }
+
+    </script>
+</body>
+
+</html>
