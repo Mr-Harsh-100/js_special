@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #ffffffcc;
+            border-radius: 16px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #ff4e4e;
+        }
+
+        #qr-result {
+            display: flex;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        #qr-image {
+            max-width: 100%;
+            display: none;
+            border: 4px solid #ff6b6b;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>QR Code Generator</h1>
+        <input type="text" id="qr-input" placeholder="Enter text or URL">
+        <button onclick="generateQR()">Generate QR Code</button>
+        <div id="qr-result">
+            <!-- <img id="qr-image" src="" alt="QR Code will appear here"> -->
+            <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+
+        function generateQR() {
+            const input = document.getElementById('qr-input').value.trim();
+            const qrImage = document.getElementById('qr-image');
+
+            if (!input) {
+                alert("Please enter text or URL!");
+                return;
+            }
+
+            new QRCode(document.getElementById("qrcode"), input);
+            // const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(input)}&size=200x200`;
+
+            // qrImage.src = apiUrl;
+            // qrImage.style.display = "block";
+        }
+
+    </script>
+
+</body>
+
+</html>
