@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Import and Auto-Save CSV</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Import and Auto-Save CSV</h1>
+    <button id="importBtn">Import CSV File</button>
+    <button id="CreateFileBtn"> Create CSV File</button>
+
+    <button id="addRowBtn" onclick="addRow()" disabled>Add Random Row</button>
+    <div id="status">No file imported.</div>
+
+    <div id="tableContainer">
+
+    </div>
+
+    <script>
+        let fileHandle = null;
+        let data = [
+            { name: "Alice", age: 25, city: "New York" },
+            { name: "Bob", age: 30, city: "London" },
+            { name: "Charlie", age: 22, city: "Paris" }
+        ];
+        // Parse CSV string to array of objects
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            return lines.slice(1).map(line => {
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = values[i]);
+                return obj;
+            });
+        }
+
+        // Convert array of objects to CSV string
+        function convertToCSV(arr) {
+            if (arr.length === 0) return "";
+            const headers = Object.keys(arr[0]).join(',');
+            const rows = arr.map(obj => Object.values(obj).join(',')).join('\n');
+            return `${headers}\n${rows}`;
+        }
+
+        // Save CSV content to the same file
+        async function saveFile() {
+            if (!fileHandle) {
+                alert("No file selected.");
+                return;
+            }
+            try {
+                statusEl.textContent = "File saving successfully.";
+                const writable = await fileHandle.createWritable();
+                const csv = convertToCSV(data);
+                await writable.write(csv);
+                await writable.close();
+                statusEl.textContent = "✅ File saved successfully.";
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = "❌ Failed to save file.";
+            }
+        }
+
+        const importBtn = document.getElementById('importBtn');
+        const statusEl = document.getElementById('status');
+
+        importBtn.addEventListener('click', async () => {
+            if (!window.showOpenFilePicker) {
+                alert("Your browser does not support File System Access API. Use Chrome or Edge.");
+                return;
+            }
+            try {
+                [fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: "CSV Files",
+                        accept: { "text/csv": [".csv"] }
+                    }],
+                    multiple: false
+                });
+
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                data = parseCSV(text);
+                statusEl.textContent = `✅ Imported ${data.length} rows from file.`;
+                addRowBtn.disabled = false;
+                renderTable(data);
+            } catch (err) {
+                if (err.name === "AbortError") {
+                    statusEl.textContent = "File open cancelled.";
+                } else {
+                    console.error(err);
+                    statusEl.textContent = "❌ Error opening file.";
+                }
+            }
+        });
+
+
+        document.getElementById("CreateFileBtn").addEventListener("click", async () => {
+            try {
+                if (!window.showSaveFilePicker) {
+                    alert("❌ Your browser doesn't support File System Access API. Use Chrome or Edge.");
+                }
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: "data.csv",
+                    types: [{
+                        description: "CSV Files",
+                        accept: { "text/csv": [".csv"] }
+                    }]
+                });
+                await saveFile(); // Save initial data
+                document.getElementById("addDataBtn").disabled = false;
+                document.getElementById("status").textContent = "✅ File selected and initialized.";
+            } catch (err) {
+                console.error("File selection canceled or failed:", err);
+            }
+        });
+
+
+
+        function renderTable(data) {
+            const container = document.getElementById("tableContainer");
+            container.innerHTML = "";
+
+            if (data.length == 0) {
+                container.innerHTML = "<p>No data available</p>";
+                return;
+            }
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const tbody = document.createElement("tbody");
+
+            // Header Row
+            const headerRow = document.createElement("tr");
+            Object.keys(data[0]).forEach(key => {
+                const th = document.createElement("th");
+                th.innerText = key;
+                headerRow.appendChild(th);
+            });
+            const actionTh = document.createElement("th");
+            actionTh.innerText = "Actions";
+            headerRow.appendChild(actionTh);
+            thead.appendChild(headerRow);
+
+            // Data Rows
+            data.forEach((item, index) => {
+                const row = document.createElement("tr");
+                row.setAttribute("draggable", "true");
+
+                // Drag events
+                row.addEventListener("dragstart", () => {
+                    draggedRowIndex = index;
+                    row.classList.add("dragging");
+                });
+
+                row.addEventListener("dragend", () => {
+                    row.classList.remove("dragging");
+                });
+
+                row.addEventListener("dragover", (e) => e.preventDefault());
+
+                row.addEventListener("drop", async () => {
+                    if (draggedRowIndex !== null && draggedRowIndex !== index) {
+                        const draggedItem = data.splice(draggedRowIndex, 1)[0];
+                        data.splice(index, 0, draggedItem);
+                        await saveFile();
+                        renderTable(data);
+                    }
+                });
+
+                // Editable cells
+                Object.keys(item).forEach(key => {
+                    const td = document.createElement("td");
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.value = item[key];
+                    input.onchange = (e) => {
+                        data[index][key] = isNaN(e.target.value) ? e.target.value : Number(e.target.value);
+                    };
+                    td.appendChild(input);
+                    row.appendChild(td);
+                });
+
+                // Actions
+                const actionTd = document.createElement("td");
+                actionTd.classList.add('action');
+                const deleteBtn = document.createElement("button");
+                deleteBtn.innerText = "Delete";
+                deleteBtn.classList.add("delete-btn");
+                deleteBtn.onclick = async () => {
+                    data.splice(index, 1);
+                    await saveFile();
+                    renderTable(data);
+                };
+                actionTd.appendChild(deleteBtn);
+                row.appendChild(actionTd);
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        function addRow() {
+            if (data.length === 0) return;
+            const newRow = {};
+            Object.keys(data[0]).forEach(key => newRow[key] = "");
+            data.push(newRow);
+            renderTable(data);
+        }
+
+        renderTable(data);
+
+
+    </script>
+
+</body>
+
+</html>

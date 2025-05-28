@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>CSV Editor </title>
+    <style>
+        :root {
+            --header-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --hover-bg: #f1f1f1;
+            --active-bg: #e9ecef;
+            --primary: #007bff;
+            --danger: #dc3545;
+            --success: #28a745;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0069d9;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-default {
+            background-color: var(--header-bg);
+            color: #333;
+        }
+
+        .btn-default:hover {
+            background-color: #e2e6ea;
+        }
+
+        #status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            padding: 12px 15px;
+            background-color: var(--header-bg);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: var(--hover-bg);
+        }
+
+
+        input[type="text"] {
+            width: 100%;
+            height: 40px;
+            padding: 8px;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            background-color: transparent;
+        }
+
+        input[type="text"]:focus {
+            /* background-color: #e9f5ff; */
+            outline: 2px solid var(--success);
+            z-index: 1;
+            position: relative;
+        }
+
+
+        .action-cell {
+            display: flex;
+            gap: 5px;
+            padding: 8px !important;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            min-width: 0;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            background-color: var(--active-bg);
+        }
+
+        .empty-table {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .formula-bar {
+            display: flex;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .formula-label {
+            padding: 8px 12px;
+            background-color: var(--header-bg);
+            font-weight: 500;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .formula-input {
+            flex-grow: 1;
+            border: none;
+            padding: 8px 12px;
+        }
+
+        .selected-cell {
+            background-color: #e7f3ff;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                <path
+                    d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z" />
+            </svg>
+            CSV Editor
+        </h1>
+
+        <div class="toolbar">
+            <button id="importBtn" class="btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                    <path fill="currentColor"
+                        d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+                </svg>
+                Import CSV
+            </button>
+            <button id="createFileBtn" class="btn-success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                    <path fill="currentColor"
+                        d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM232 344V280H168c-13.3 0-24-10.7-24-24s10.7-24 24-24h64V168c0-13.3 10.7-24 24-24s24 10.7 24 24v64h64c13.3 0 24 10.7 24 24s-10.7 24-24 24H280v64c0 13.3-10.7 24-24 24s-24-10.7-24-24z" />
+                </svg>
+                New CSV
+            </button>
+            <button id="saveBtn" class="btn-primary" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                    <path fill="currentColor"
+                        d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V173.3c0-17-6.7-33.3-18.7-45.3L352 50.7C340 38.7 323.7 32 306.7 32H64zm0 64c0-17.7 14.3-32 32-32H288c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V96zM224 288a64 64 0 1 1 0 128 64 64 0 1 1 0-128z" />
+                </svg>
+                Save
+            </button>
+            <button id="addRowBtn" class="btn-default" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                    <path fill="currentColor"
+                        d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
+                </svg>
+                Add Row
+            </button>
+            <button id="addColumnBtn" class="btn-default" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                    <path fill="currentColor"
+                        d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z" />
+                </svg>
+                Add Column
+            </button>
+            <button id="autoSaveBtn" class="btn-default" onclick="toggleAutoSave()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16">
+                    <path fill="currentColor"
+                        d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z" />
+                </svg>
+                Auto-save OFF
+            </button>
+
+        </div>
+
+        <div class="formula-bar">
+            <div class="formula-label">Formula:</div>
+            <input type="text" class="formula-input" id="formulaBar" placeholder="Selected cell will appear here..."
+                readonly>
+        </div>
+
+        <div id="status" class="status-info">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16">
+                <path fill="currentColor"
+                    d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z" />
+            </svg>
+            No file loaded. Import or create a new CSV file to begin.
+        </div>
+
+        <div class="table-container">
+            <div id="tableWrapper"></div>
+        </div>
+    </div>
+
+    <script>
+        let fileHandle = null;
+        let data = [];
+        let draggedRowIndex = null;
+        let selectedCell = null;
+        let hasUnsavedChanges = false; // Reset flag after successful save
+
+        // DOM elements
+        const importBtn = document.getElementById('importBtn');
+        const createFileBtn = document.getElementById('createFileBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const addRowBtn = document.getElementById('addRowBtn');
+        const addColumnBtn = document.getElementById('addColumnBtn');
+        const statusEl = document.getElementById('status');
+        const formulaBar = document.getElementById('formulaBar');
+        const tableWrapper = document.getElementById('tableWrapper');
+
+        let autoSaveEnabled = false;
+        let autoSaveInterval = 30000; // 30 seconds
+        let autoSaveTimer = null;
+
+
+
+        function toggleAutoSave() {
+            autoSaveEnabled = !autoSaveEnabled;
+
+            if (autoSaveEnabled) {
+                // Start auto-save
+                autoSaveTimer = setInterval(async () => {
+                    if (fileHandle && data.length > 0) {
+                        try {
+                            await saveFile();
+                            showStatus(`Auto-saved at ${new Date().toLocaleTimeString()}`, "success");
+                        } catch (err) {
+                            console.error("Auto-save failed:", err);
+                        }
+                    }
+                }, autoSaveInterval);
+
+                showStatus("Auto-save enabled (every 30 seconds)", "success");
+            } else {
+                // Stop auto-save
+                clearInterval(autoSaveTimer);
+                autoSaveTimer = null;
+                showStatus("Auto-save disabled", "info");
+            }
+
+            // Update UI to reflect auto-save state
+            updateAutoSaveUI();
+        }
+
+        function updateAutoSaveUI() {
+            const autoSaveBtn = document.getElementById('autoSaveBtn');
+            if (autoSaveBtn) {
+                autoSaveBtn.innerHTML = autoSaveEnabled ?
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg> Auto-save ON' :
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16"><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg> Auto-save OFF';
+
+                autoSaveBtn.className = autoSaveEnabled ? 'btn-success' : 'btn-default';
+            }
+        }
+        // Parse CSV string to array of objects
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            if (lines.length === 0) return [];
+
+            // Handle quoted values with commas
+            const headers = lines[0].split(',').map(h => h.trim());
+
+            return lines.slice(1).map(line => {
+                // Simple CSV parsing - for more complex cases consider a library
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((h, i) => {
+                    obj[h] = values[i] ? values[i].trim() : '';
+                });
+                return obj;
+            });
+        }
+
+        // Convert array of objects to CSV string
+        function convertToCSV(arr) {
+            if (arr.length === 0) return "";
+            const headers = Object.keys(arr[0]);
+            const rows = arr.map(obj =>
+                headers.map(header => obj[header]).join(',')
+            );
+            return `${headers.join(',')}\n${rows.join('\n')}`;
+        }
+
+        // Save CSV content to the same file
+        async function saveFile() {
+            if (!fileHandle) {
+                showStatus("No file selected.", "error");
+                return;
+            }
+            try {
+                showStatus("Saving file...", "info");
+                const writable = await fileHandle.createWritable();
+                const csv = convertToCSV(data);
+                await writable.write(csv);
+                await writable.close();
+                showStatus("File saved successfully.", "success");
+                return true;
+            } catch (err) {
+                console.error(err);
+                showStatus("Failed to save file.", "error");
+                return false;
+            }
+        }
+
+        // Update status message
+        function showStatus(message, type = "info") {
+            statusEl.textContent = message;
+            statusEl.className = `status-${type}`;
+
+            // Add appropriate icon
+            let iconPath = '';
+            if (type === "success") {
+                iconPath = 'M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z';
+            } else if (type === "error") {
+                iconPath = 'M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z';
+            } else {
+                iconPath = 'M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z';
+            }
+
+            const icon = statusEl.querySelector('svg') || document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            icon.innerHTML = `<path fill="currentColor" d="${iconPath}"/>`;
+            if (!statusEl.querySelector('svg')) {
+                icon.setAttribute('width', '16');
+                icon.setAttribute('height', '16');
+                icon.setAttribute('viewBox', '0 0 512 512');
+                statusEl.insertBefore(icon, statusEl.firstChild);
+            }
+        }
+
+        // Import CSV file
+        importBtn.addEventListener('click', async () => {
+            if (!window.showOpenFilePicker) {
+                showStatus("Your browser does not support File System Access API. Use Chrome or Edge.", "error");
+                return;
+            }
+            try {
+                [fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: "CSV Files",
+                        accept: { "text/csv": [".csv"] }
+                    }],
+                    multiple: false
+                });
+
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                data = parseCSV(text);
+                document.title = file.name;
+                if (data.length > 0) {
+                    showStatus(`Imported ${data.length} rows from ${file.name}`, "success");
+                    enableControls();
+                    renderTable(data);
+                } else {
+                    showStatus("Imported file is empty. Add data to continue.", "info");
+                    enableControls();
+                    renderTable(data);
+                }
+            } catch (err) {
+                if (err.name === "AbortError") {
+                    showStatus("File open cancelled.", "info");
+                } else {
+                    console.error(err);
+                    showStatus("Error opening file.", "error");
+                }
+            }
+        });
+
+        // Create new CSV file
+        createFileBtn.addEventListener('click', async () => {
+            try {
+                if (!window.showSaveFilePicker) {
+                    showStatus("Your browser doesn't support File System Access API. Use Chrome or Edge.", "error");
+                    return;
+                }
+
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: "data.csv",
+                    types: [{
+                        description: "CSV Files",
+                        accept: { "text/csv": [".csv"] }
+                    }]
+                });
+
+                // Initialize with empty data and one column
+                data = [];
+                showStatus("New file created. Add columns and rows to begin.", "success");
+                enableControls();
+                renderTable(data);
+            } catch (err) {
+                if (err.name !== "AbortError") {
+                    console.error("File creation failed:", err);
+                    showStatus("File creation failed.", "error");
+                }
+            }
+        });
+
+        // Save button
+        saveBtn.addEventListener('click', async () => {
+            const success = await saveFile();
+            if (success) {
+                hasUnsavedChanges = false;
+                document.title = document.title.replace('*', ''); // Remove asterisk
+            }
+        });
+
+        // Add row button
+        addRowBtn.addEventListener('click', () => {
+            if (data.length === 0 && Object.keys(data).length === 0) {
+                // If no columns exist, add a default column first
+                addColumn();
+            }
+
+            const newRow = {};
+            if (data.length > 0) {
+                Object.keys(data[0]).forEach(key => newRow[key] = "");
+            } else {
+                // If no data but columns exist (from addColumn)
+                const columns = document.querySelectorAll('th[data-column]');
+                columns.forEach(col => {
+                    newRow[col.getAttribute('data-column')] = "";
+                });
+            }
+
+            data.push(newRow);
+            renderTable(data);
+            showStatus("Row added.", "success");
+            saveBtn.disabled = false;
+            setUnsavedChanges();
+        });
+
+        // Add column button
+        addColumnBtn.addEventListener('click', addColumn);
+
+        function addColumn() {
+            let columnName = "Column " + (Object.keys(data[0] || {}).length + 1);
+
+            // Prompt for column name
+            columnName = prompt("Enter column name:", columnName);
+            if (!columnName) return;
+
+            if (data.length > 0) {
+                // Add column to existing rows
+                data.forEach(row => row[columnName] = "");
+            } else {
+                // Create first row with this column
+                const newRow = {};
+                newRow[columnName] = "";
+                data.push(newRow);
+            }
+
+            renderTable(data);
+            showStatus(`Column "${columnName}" added.`, "success");
+            saveBtn.disabled = false;
+            setUnsavedChanges();
+        }
+
+        // Enable/disable controls based on file state
+        function enableControls() {
+            saveBtn.disabled = false;
+            addRowBtn.disabled = false;
+            addColumnBtn.disabled = false;
+            document.getElementById('autoSaveBtn').disabled = false;
+            updateAutoSaveUI();
+            hasUnsavedChanges = false; // Reset when new file is loaded/created
+            document.title = document.title.replace(/^\*/, ''); // Remove asterisk
+        }
+        // Render the table
+        function renderTable(data) {
+            tableWrapper.innerHTML = "";
+
+            if (data.length === 0) {
+                tableWrapper.innerHTML = `<div class="empty-table">No data available. Add columns and rows to begin.</div>`;
+                return;
+            }
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const tbody = document.createElement("tbody");
+
+            // Header Row
+            const headerRow = document.createElement("tr");
+            Object.keys(data[0]).forEach(key => {
+                const th = document.createElement("th");
+                // th.innerText = key;
+                th.setAttribute('data-column', key);
+
+                // Add column menu button
+                const menuBtn = document.createElement("button");
+                menuBtn.className = "action-btn btn-default";
+                menuBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 512" width="10" height="10"><path fill="currentColor" d="M64 360a56 56 0 1 0 0 112 56 56 0 1 0 0-112zm0-160a56 56 0 1 0 0 112 56 56 0 1 0 0-112zM120 96A56 56 0 1 0 8 96a56 56 0 1 0 112 0z"/></svg>';
+                menuBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showColumnMenu(key, menuBtn);
+                };
+
+                const headerContent = document.createElement("div");
+                headerContent.style.display = "flex";
+                headerContent.style.justifyContent = "space-between";
+                headerContent.style.alignItems = "center";
+                headerContent.innerHTML = `<span>${key}</span>`;
+                headerContent.appendChild(menuBtn);
+
+                th.appendChild(headerContent);
+                headerRow.appendChild(th);
+            });
+
+            // Add action column header
+            const actionTh = document.createElement("th");
+            actionTh.innerText = "Actions";
+            headerRow.appendChild(actionTh);
+            thead.appendChild(headerRow);
+
+            // Data Rows
+            data.forEach((item, rowIndex) => {
+                const row = document.createElement("tr");
+                row.setAttribute("draggable", "true");
+                row.setAttribute("data-row-index", rowIndex);
+
+                // Drag events
+                row.addEventListener("dragstart", () => {
+                    draggedRowIndex = rowIndex;
+                    row.classList.add("dragging");
+                });
+
+                row.addEventListener("dragend", () => {
+                    row.classList.remove("dragging");
+                });
+
+                row.addEventListener("dragover", (e) => e.preventDefault());
+
+                row.addEventListener("drop", async () => {
+                    if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
+                        const draggedItem = data.splice(draggedRowIndex, 1)[0];
+                        data.splice(rowIndex, 0, draggedItem);
+                        await saveFile();
+                        renderTable(data);
+                    }
+                });
+
+                // Editable cells
+                Object.keys(item).forEach((key, colIndex) => {
+                    const td = document.createElement("td");
+                    td.setAttribute("data-column", key);
+                    td.setAttribute("data-row-index", rowIndex);
+
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.value = item[key];
+                    // input.placeholder = `Enter ${key}...`;
+
+                    // Cell selection
+                    input.addEventListener('focus', () => {
+                        // Remove selection from previous cell
+                        if (selectedCell) {
+                            selectedCell.classList.remove('selected-cell');
+                        }
+
+                        // Select new cell
+                        selectedCell = td;
+                        td.classList.add('selected-cell');
+                        formulaBar.value = `Row ${rowIndex + 1}, Col ${key}: ${item[key]}`;
+                    });
+
+                    input.onchange = (e) => {
+                        data[rowIndex][key] = e.target.value;
+                        saveBtn.disabled = false;
+                        setUnsavedChanges();
+                    };
+
+                    td.appendChild(input);
+                    row.appendChild(td);
+                });
+
+                // Actions cell
+                const actionTd = document.createElement("td");
+                actionTd.className = 'action-cell';
+
+                // Delete button
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "action-btn btn-danger";
+                deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="12" height="12"><path fill="currentColor" d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>';
+                deleteBtn.title = "Delete row";
+                deleteBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm("Are you sure you want to delete this row?")) {
+                        data.splice(rowIndex, 1);
+                        await saveFile();
+                        renderTable(data);
+                        showStatus("Row deleted.", "success");
+                    }
+                };
+
+                // Duplicate button
+                const duplicateBtn = document.createElement("button");
+                duplicateBtn.className = "action-btn btn-default";
+                duplicateBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="12" height="12"><path fill="currentColor" d="M208 0H332.1c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9V336c0 26.5-21.5 48-48 48H208c-26.5 0-48-21.5-48-48V48c0-26.5 21.5-48 48-48zM48 128h80v64H64V448H256V416h64v48c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V176c0-26.5 21.5-48 48-48z"/></svg>';
+                duplicateBtn.title = "Duplicate row";
+                duplicateBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const newRow = JSON.parse(JSON.stringify(data[rowIndex]));
+                    data.splice(rowIndex + 1, 0, newRow);
+                    renderTable(data);
+                    showStatus("Row duplicated.", "success");
+                    saveBtn.disabled = false;
+                    setUnsavedChanges();
+                };
+
+                actionTd.appendChild(duplicateBtn);
+                actionTd.appendChild(deleteBtn);
+                row.appendChild(actionTd);
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            tableWrapper.appendChild(table);
+        }
+
+        // Show column menu
+        function showColumnMenu(columnName, button) {
+            // Remove any existing menus
+            const existingMenu = document.querySelector('.column-menu');
+            if (existingMenu) existingMenu.remove();
+
+            // Create menu
+            const menu = document.createElement('div');
+            menu.className = 'column-menu';
+            menu.style.position = 'absolute';
+            menu.style.backgroundColor = 'white';
+            menu.style.border = '1px solid var(--border-color)';
+            menu.style.borderRadius = '4px';
+            menu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            menu.style.zIndex = '1000';
+            menu.style.padding = '5px 0';
+
+            // Add menu items
+            const items = [
+                {
+                    label: 'Rename Column',
+                    action: () => renameColumn(columnName)
+                },
+                {
+                    label: 'Delete Column',
+                    action: () => deleteColumn(columnName)
+                },
+                {
+                    label: 'Sort A-Z',
+                    action: () => sortColumn(columnName, 'asc')
+                },
+                {
+                    label: 'Sort Z-A',
+                    action: () => sortColumn(columnName, 'desc')
+                }
+            ];
+
+            items.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.style.padding = '8px 16px';
+                menuItem.style.cursor = 'pointer';
+                menuItem.textContent = item.label;
+                menuItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    item.action();
+                    menu.remove();
+                });
+                menuItem.addEventListener('mouseenter', () => {
+                    menuItem.style.backgroundColor = 'var(--hover-bg)';
+                });
+                menuItem.addEventListener('mouseleave', () => {
+                    menuItem.style.backgroundColor = 'transparent';
+                });
+                menu.appendChild(menuItem);
+            });
+
+            // Position and show menu
+            const rect = button.getBoundingClientRect();
+            menu.style.left = `${rect.left}px`;
+            menu.style.top = `${rect.bottom}px`;
+            document.body.appendChild(menu);
+
+            // Close menu when clicking elsewhere
+            const clickHandler = (e) => {
+                if (!menu.contains(e.target) && e.target !== button) {
+                    menu.remove();
+                    document.removeEventListener('click', clickHandler);
+                }
+            };
+            document.addEventListener('click', clickHandler);
+        }
+
+        // Rename column
+        function renameColumn(columnName) {
+            const newName = prompt("Enter new column name:", columnName);
+            if (!newName || newName === columnName) return;
+
+            data.forEach(row => {
+                row[newName] = row[columnName];
+                delete row[columnName];
+            });
+
+            renderTable(data);
+            showStatus(`Column renamed from "${columnName}" to "${newName}".`, "success");
+            saveBtn.disabled = false;
+            setUnsavedChanges();
+
+        }
+
+        // Delete column
+        function deleteColumn(columnName) {
+            if (!confirm(`Are you sure you want to delete column "${columnName}"?`)) return;
+
+            data.forEach(row => {
+                delete row[columnName];
+            });
+
+            // Remove empty rows if this was the last column
+            data = data.filter(row => Object.keys(row).length > 0);
+
+            renderTable(data);
+            showStatus(`Column "${columnName}" deleted.`, "success");
+            saveBtn.disabled = false;
+            setUnsavedChanges();
+
+        }
+
+        // Sort column
+        function sortColumn(columnName, direction) {
+            data.sort((a, b) => {
+                const valA = a[columnName] || '';
+                const valB = b[columnName] || '';
+
+                if (direction === 'asc') {
+                    return valA.toString().localeCompare(valB.toString());
+                } else {
+                    return valB.toString().localeCompare(valA.toString());
+                }
+            });
+
+            renderTable(data);
+            showStatus(`Column "${columnName}" sorted ${direction === 'asc' ? 'A-Z' : 'Z-A'}.`, "success");
+            saveBtn.disabled = false;
+            setUnsavedChanges();
+        }
+
+        function setUnsavedChanges() {
+            if (!hasUnsavedChanges) {
+                hasUnsavedChanges = true;
+                let title = document.title.replace('*', '');
+                // Update document title to show unsaved changes
+                document.title = title + "*";
+            }
+            saveBtn.disabled = false;
+        }
+
+        // Add beforeunload event handler
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        // Initialize
+        renderTable(data);
+    </script>
+</body>
+
+</html>

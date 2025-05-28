@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>CSV Auto-Save</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+        }
+
+        #chooseFileBtn {
+            background-color: #007bff;
+        }
+
+        #addDataBtn {
+            background-color: #28a745;
+        }
+
+        #status {
+            margin-top: 15px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CSV Auto-Save Example</h1>
+        <button id="chooseFileBtn">📁 Choose or Create CSV File</button>
+        <button id="addDataBtn" disabled>➕ Add Random Row</button>
+        <p id="status">No file selected</p>
+    </div>
+
+    <script>
+        let fileHandle = null;
+
+        let data = [
+            { name: "Alice", age: 25, city: "New York" },
+            { name: "Bob", age: 30, city: "London" }
+        ];
+
+        function convertToCSV(arr) {
+            if (arr.length === 0) return "";
+            const headers = Object.keys(arr[0]).join(",");
+            const rows = arr.map(obj => Object.values(obj).join(",")).join("\n");
+            return `${headers}\n${rows}`;
+        }
+
+        async function saveFile() {
+            if (!fileHandle) return;
+            try {
+                const writable = await fileHandle.createWritable();
+                const csv = convertToCSV(data);
+                await writable.write(csv);
+                await writable.close();
+                document.getElementById("status").textContent = "✅ CSV file updated.";
+            } catch (err) {
+                console.error("Error saving file:", err);
+                document.getElementById("status").textContent = "❌ Failed to save file.";
+            }
+        }
+
+        document.getElementById("chooseFileBtn").addEventListener("click", async () => {
+            try {
+                if (!window.showSaveFilePicker) {
+                    alert("❌ Your browser doesn't support File System Access API. Use Chrome or Edge.");
+                }
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: "data.csv",
+                    types: [{
+                        description: "CSV Files",
+                        accept: { "text/csv": [".csv"] }
+                    }]
+                });
+                await saveFile(); // Save initial data
+                document.getElementById("addDataBtn").disabled = false;
+                document.getElementById("status").textContent = "✅ File selected and initialized.";
+            } catch (err) {
+                console.error("File selection canceled or failed:", err);
+            }
+        });
+
+        document.getElementById("addDataBtn").addEventListener("click", async () => {
+            const id = Math.floor(Math.random() * 1000);
+            data.push({ name: `User${id}`, age: 20 + (id % 10), city: `City${id}` });
+            await saveFile();
+        });
+
+    </script>
+</body>
+
+</html>
